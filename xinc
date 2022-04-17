@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# This is the helper script for the xinc 'X11 Clients inside a Container'
+# Docker Image
+#
+# ------------------------------------------------------------------------------
+# Usage:
+#
+#   $ xinc               # <-- opens up an xterm inside a new container
+#   $ xinc $ALT_CMD      # <-- as above, but runs the specified command instead
+#
+# The following environment variables can be used to override default image 
+# tags and/or 'home directory' bindings
+#
+#   XINC_TAG     : defines which image tag to use when trying to run xinc
+#   XINC_HOME    : defines the 'source' directory that should be bound to
+#                  the home directory inside the container; if it doesn't
+#                  already exist, it will be created by this script
+# ------------------------------------------------------------------------------
+
+if [ -z "${XINC_TAG}" ]; then
+  XINC_TAG=ubuntu-20.04
+fi
+
+if ! docker images | grep "^xinc *${XINC_TAG}" > /dev/null 2>&1; then
+  docker pull xinc:${XINC_TAG} > /dev/null 2>&1 || \
+    echo "Error: xinc:${XINC_TAG} is _not_ a valid local image, nor could it be pulled from Docker Hub; please set XINC_TAG to a valid image tag"; exit 1
+fi
+
+
+if [ -z "${XINC_HOME}" ]; then
+  XINC_HOME=${HOME}/.xinc
+fi
+
+if [ ! -d "${XINC_HOME}" ]; then
+  if [ -a "${XINC_HOME}" ]; then
+    echo "Error: ${XINC_HOME} exists but is _not_ a directory; please fix this or set XINC_HOME to specify another path"; exit 2
+  else
+    mkdir -p ${XINC_HOME}
+  fi
+fi
+
+
+
+docker run -v /tmp/.X11-unix:/tmp/.X11-unix \
+           -e DISPLAY=$DISPLAY \
+           -v /run/user/${UID}/pulse/native:/var/run/pulse/native \
+           -e PULSE_SERVER=unix:/var/run/pulse/native \
+           --mount type=bind,source="${XINC_HOME}",target=/home/default \
+           -it --rm --user=${UID} --workdir /home/default xinc:${XINC_TAG} "$@"
