@@ -19,14 +19,8 @@
 #   XINC_DISPOSABLE : if set, spawns a 'disposable session' which might be
 #                  mostly useful when launching programs like firefox, etc.
 # ------------------------------------------------------------------------------
-
 if [ -z "${XINC_TAG}" ]; then
   XINC_TAG=ubuntu-20.04
-fi
-
-if ! docker images | grep "^xinc *${XINC_TAG}" > /dev/null 2>&1; then
-  docker pull xinc:${XINC_TAG} > /dev/null 2>&1 || \
-    echo "Error: xinc:${XINC_TAG} is _not_ a valid local image, nor could it be pulled from Docker Hub; please set XINC_TAG to a valid image tag"; exit 1
 fi
 
 
