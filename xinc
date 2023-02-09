@@ -16,6 +16,8 @@
 #   XINC_HOME    : defines the 'source' directory that should be bound to
 #                  the home directory inside the container; if it doesn't
 #                  already exist, it will be created by this script
+#   XINC_DISPOSABLE : if set, spawns a 'disposable session' which might be
+#                  mostly useful when launching programs like firefox, etc.
 # ------------------------------------------------------------------------------
 
 if [ -z "${XINC_TAG}" ]; then
@@ -26,6 +28,13 @@ if ! docker images | grep "^xinc *${XINC_TAG}" > /dev/null 2>&1; then
   docker pull xinc:${XINC_TAG} > /dev/null 2>&1 || \
     echo "Error: xinc:${XINC_TAG} is _not_ a valid local image, nor could it be pulled from Docker Hub; please set XINC_TAG to a valid image tag"; exit 1
 fi
+
+
+case "$1" in
+  -d|--disposable)
+    XINC_DISPOSABLE=true
+    shift ;;
+esac
 
 
 if [ -z "${XINC_HOME}" ]; then
@@ -40,11 +49,13 @@ if [ ! -d "${XINC_HOME}" ]; then
   fi
 fi
 
+if [ -z "${XINC_DISPOSABLE}" ]; then
+  XINC_DOCKER_ARGS="--mount type=bind,source="${XINC_HOME}",target=/home/default"
+fi
 
 
 docker run -v /tmp/.X11-unix:/tmp/.X11-unix \
            -e DISPLAY=$DISPLAY \
            -v /run/user/${UID}/pulse/native:/var/run/pulse/native \
-           -e PULSE_SERVER=unix:/var/run/pulse/native \
-           --mount type=bind,source="${XINC_HOME}",target=/home/default \
-           -it --rm --user=${UID} --workdir /home/default xinc:${XINC_TAG} "$@"
+           -e PULSE_SERVER=unix:/var/run/pulse/native ${XINC_DOCKER_ARGS} \
+           -it --rm --user=${UID} --workdir /home/default dreisigermetz/xinc:${XINC_TAG} "$@"
